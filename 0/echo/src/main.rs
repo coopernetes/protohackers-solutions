@@ -1,7 +1,17 @@
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::net::{TcpListener, TcpStream, SocketAddr};
 
-fn handle_client(stream: TcpStream) {
-    println!("Called handle_client")
+fn handle_client(mut stream: TcpStream) {
+    println!("Called handle_client");
+    let buf_reader = BufReader::new(&mut stream);
+    let content: Vec<_> = buf_reader.lines()
+        .map(|l| l.unwrap())
+        .take_while(|l| !l.is_empty())
+        .collect();
+    let content_s = content.join("");
+    println!("content: {content_s}");
+    stream.write_all(content_s.as_bytes()).unwrap();
 }
 
 
