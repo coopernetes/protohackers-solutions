@@ -1,25 +1,26 @@
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, stderr};
 use std::net::{TcpListener, TcpStream, SocketAddr};
 
-fn handle_client(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream) -> Result<(), std::io::Error> {
     println!("Called handle_client");
-    let buf_reader = BufReader::new(&mut stream);
-    let content: Vec<_> = buf_reader.lines()
-        .map(|l| l.unwrap())
-        .take_while(|l| !l.is_empty())
-        .collect();
-    let content_s = content.join("");
-    println!("content: {content_s}");
-    stream.write_all(content_s.as_bytes()).unwrap();
+    println!("{:?}", stream);
+    let mut buffer: Vec<u8> = vec![];
+    let mut buf_reader = BufReader::new(&mut stream);
+    buf_reader.read_to_end(&mut buffer)?;
+    println!("content: {:?}", buffer);
+    stream.write_all(buffer.as_slice())?;
+    Ok(())
 }
 
 
 fn main() -> std::io::Result<()> {
     println!("Starting echo.");
     let addrs = [
-       SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0x1], 0)),
-       SocketAddr::from(([127, 0, 0, 1], 0)),
+        SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0x0], 3000)),
+        SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0x0], 0)),
+        SocketAddr::from(([0, 0, 0, 0], 3000)),
+        SocketAddr::from(([0, 0, 0, 0], 0)),
     ];
     let listener = TcpListener::bind(&addrs[..]).unwrap();
 
@@ -29,7 +30,21 @@ fn main() -> std::io::Result<()> {
     
     println!("Listening on {port_s}");
     for stream in listener.incoming() {
-        handle_client(stream?);
+        match stream {
+            Ok(stream) => {
+                handle_connection(stream)?;
+            }
+            Err(e) => { stderr().write(format!("Connection failed: {e}").as_bytes())?; }
+        }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+
+    #[test]
+    fn test() {
+        assert!(true)
+    }
 }
